@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- Meta tags -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Link to favicon -->
+  <link rel="icon" type="image/x-icon" href="timer-icon.ico">
+
+  <!-- Font Awesome CSS for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Import handwriting font -->
+  <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
+
+  <style>
+    /* CSS Styles */
+
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 20px;
+      background-color: var(--bg-color, #ffffff);
+      color: var(--text-color, #000000);
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* Variables for light and dark mode */
+    body.light-mode {
+      --bg-color: #ffffff;
+      --text-color: #000000;
+      --icon-color: #000000;
+      --button-bg: #28a745; /* Green */
+      --button-text-color: #ffffff;
+      --button-hover-bg: #218838; /* Darker green */
+    }
+
+    body.dark-mode {
+      --bg-color: #000000;
+      --text-color: #ffffff;
+      --icon-color: #ffffff;
+      --button-bg: #28a745; /* Green */
+      --button-text-color: #ffffff;
+      --button-hover-bg: #218838; /* Darker green */
+    }
+
+    /* Styles for the top buttons container */
+    #topButtons {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 10px;
+      z-index: 1000;
+    }
+
+    /* Styles for the buttons */
+    .top-button {
+      background-color: transparent;
+      color: var(--icon-color);
+      border: none;
+      padding: 5px;
+      cursor: pointer;
+      font-size: 24px;
+    }
+
+    /* Remove focus outline */
+    .top-button:focus {
+      outline: none;
+    }
+
+    /* Styles for the timer */
+    .base-timer {
+      position: relative;
+      width: 90vw;
+      max-width: 300px;
+      height: 90vw;
+      max-height: 300px;
+      margin-bottom: 20px;
+    }
+
+    .base-timer__svg {
+      transform: scaleX(-1);
+    }
+
+    .base-timer__circle {
+      fill: none;
+      stroke: none;
+    }
+
+    .base-timer__path-elapsed {
+      stroke-width: 7px;
+      stroke: grey;
+    }
+
+    .base-timer__path-remaining {
+      stroke-width: 7px;
+      stroke-linecap: round;
+      transform: rotate(90deg);
+      transform-origin: center;
+      transition: 1s linear all;
+      fill-rule: nonzero;
+      stroke: currentColor;
+    }
+
+    .base-timer__path-remaining.green {
+      color: rgb(65, 184, 131);
+    }
+
+    .base-timer__path-remaining.orange {
+      color: orange;
+    }
+
+    .base-timer__path-remaining.red {
+      color: red;
+    }
+
+    .base-timer__label {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(24px, 10vw, 48px);
+      text-align: center;
+    }
+
+    /* Styles for the "Time's Up" text */
+    .times-up {
+      animation: slowVibration 1.5s infinite;
+    }
+
+    /* Define the slow vibration animation */
+    @keyframes slowVibration {
+      0% { transform: translate(0); }
+      25% { transform: translate(-2px, 0); }
+      50% { transform: translate(0); }
+      75% { transform: translate(2px, 0); }
+      100% { transform: translate(0); }
+    }
+
+    /* Styles for the input form */
+    #inputForm {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    #inputForm label {
+      font-size: clamp(16px, 5vw, 20px);
+    }
+
+    #inputForm input {
+      font-size: clamp(14px, 5vw, 18px);
+      padding: 10px;
+      margin: 5px 0;
+      width: 80%;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-sizing: border-box;
+    }
+
+    /* Simplified green button styles */
+    .modern-button {
+      font-size: clamp(16px, 5vw, 20px);
+      padding: 12px 20px;
+      margin: 10px 5px 0 5px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      background-color: var(--button-bg);
+      color: var(--button-text-color);
+      transition: background-color 0.3s;
+    }
+
+    .modern-button:hover {
+      background-color: var(--button-hover-bg);
+    }
+
+    /* Styles for the QR code wrapper */
+    #qrWrapper {
+      display: none;
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    /* Styles for the QR code container */
+    #showEWM {
+      position: relative;
+      padding: 20px;
+      background-color: var(--bg-color);
+      border: 2px solid var(--text-color);
+      text-align: center;
+      transition: background-color 0.3s, border 0.3s;
+      display: inline-block;
+    }
+
+    /* Styles for the doodle text above the QR code */
+    .doodle-text {
+      font-family: 'Permanent Marker', cursive;
+      font-size: 20px;
+      margin-bottom: 10px;
+      color: var(--text-color);
+      text-align: center;
+      transition: color 0.3s;
+    }
+
+    /* Styles for the title above the timer */
+    #timerTitle {
+      font-family: 'Permanent Marker', cursive;
+      font-size: clamp(24px, 8vw, 36px);
+      margin-bottom: 10px;
+      text-align: center;
+      color: var(--text-color);
+      transition: color 0.3s;
+    }
+  </style>
+</head>
+<body>
+  <div id="topButtons">
+    <button id="resetButton" class="top-button" aria-label="Reset Timer"><i class="fas fa-redo"></i></button>
+    <button id="modeToggle" class="top-button" aria-label="Toggle Dark Mode"><i class="fas fa-moon"></i></button>
+  </div>
+
+  <div id="inputForm">
+    <label for="duration">Enter duration (minutes):</label><br>
+    <input type="number" id="duration" name="duration" min="1" required><br>
+
+    <label for="title">Title (Optional):</label><br>
+    <input type="text" id="title" name="title" placeholder="Enter title (optional)"><br>
+
+    <label for="endMessage">End Message (Optional):</label><br>
+    <input type="text" id="endMessage" name="endMessage" placeholder="Time's Up"><br>
+
+    <button id="startButton" class="modern-button">Start Timer</button>
+    <button id="returnButton" class="modern-button" style="display:none;">Return to Previous Session</button>
+  </div>
+  <div id="timerTitle"></div>
+  <div id="app"></div>
+
+  <div id="qrWrapper">
+    <div class="doodle-text">Scan to take me with you</div>
+    <div id="showEWM">
+      <div class="qr-code-container">
+        <!-- QR code will be inserted here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Include the QRCode.js library -->
+  <script src="qrcode.min.js"></script>
+
+  <!-- Place the script at the end of the body to ensure elements are loaded -->
+  <script>
+    // Dark/Light mode toggle functionality
+    (function() {
+      const modeToggle = document.getElementById('modeToggle');
+      const resetButton = document.getElementById('resetButton');
+      const currentMode = localStorage.getItem('colorMode') || 'light';
+      document.body.classList.add(currentMode + '-mode');
+      updateModeToggleIcon(currentMode);
+
+      modeToggle.addEventListener('click', function() {
+        if (document.body.classList.contains('dark-mode')) {
+          document.body.classList.remove('dark-mode');
+          document.body.classList.add('light-mode');
+          localStorage.setItem('colorMode', 'light');
+          updateModeToggleIcon('light');
+        } else {
+          document.body.classList.remove('light-mode');
+          document.body.classList.add('dark-mode');
+          localStorage.setItem('colorMode', 'dark');
+          updateModeToggleIcon('dark');
+        }
+
+        // Update QR code colors when mode changes
+        if (typeof updateQRCodeColors === 'function') {
+          updateQRCodeColors();
+        }
+      });
+
+      function updateModeToggleIcon(mode) {
+        if (mode === 'dark') {
+          modeToggle.innerHTML = '<i class="fas fa-lightbulb"></i>';
+          modeToggle.setAttribute('aria-label', 'Switch to Light Mode');
+        } else {
+          modeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+          modeToggle.setAttribute('aria-label', 'Switch to Dark Mode');
+        }
+
+        // Update icon colors
+        updateIconColors();
+      }
+
+      function updateIconColors() {
+        const icons = document.querySelectorAll('.top-button i');
+        icons.forEach(icon => {
+          icon.style.color = getComputedStyle(document.documentElement).getPropertyValue('--icon-color');
+        });
+      }
+
+      // Initial icon color update
+      updateIconColors();
+    })();
+
+    // Function to get URL parameters
+    function get(name) {
+      var regex = new RegExp('[?&]' + encodeURIComponent(name) + '=([^&]*)');
+      var result = regex.exec(location.search);
+      if (result) {
+        return decodeURIComponent(result[1]);
+      }
+      return null;
+    }
+
+    // Function to start the timer with user input
+    function startTimerWithInput() {
+      var duration = document.getElementById('duration').value;
+      var title = document.getElementById('title').value;
+      var endMessage = document.getElementById('endMessage').value || "Time's Up";
+      if (duration > 0) {
+        var startTime = Math.floor(Date.now() / 1000); // Get Unix timestamp in seconds
+        var s = startTime; // No need to encode
+        var d = parseInt(duration); // No need to encode
+
+        // Build the new URL with parameters
+        var params = new URLSearchParams();
+        params.append('s', s);
+        params.append('d', d);
+        if (title) params.append('t', encodeURIComponent(title));
+        if (endMessage !== "Time's Up") params.append('e', encodeURIComponent(endMessage));
+
+        var newUrl = window.location.protocol + '//' + window.location.host + window.location.pathname + '?' + params.toString();
+        window.location.href = newUrl;
+      } else {
+        alert('Please enter a valid duration.');
+      }
+    }
+
+    // Function to reset the timer
+    function resetTimer() {
+      // Store the current URL
+      var currentUrl = window.location.href;
+
+      // Remove query parameters to reset
+      var baseUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
+
+      // Store the previous session URL in localStorage
+      localStorage.setItem('previousSession', currentUrl);
+
+      window.location.href = baseUrl;
+    }
+
+    // Attach event listener to the start button and reset button
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('startButton').addEventListener('click', startTimerWithInput);
+      document.getElementById('resetButton').addEventListener('click', resetTimer);
+
+      // Check if there's a previous session
+      var previousSession = localStorage.getItem('previousSession');
+      if (previousSession) {
+        var returnButton = document.getElementById('returnButton');
+        returnButton.style.display = 'inline-block';
+        returnButton.addEventListener('click', function() {
+          window.location.href = previousSession;
+        });
+      }
+    });
+
+    var sParam = get('s');
+    var dParam = get('d');
+
+    if (sParam && dParam) {
+      document.getElementById('inputForm').style.display = 'none';
+      document.getElementById('qrWrapper').style.display = 'block'; // Show the QR code wrapper
+
+      var blurred = false;
+      window.onblur = function() { blurred = true; };
+      window.onfocus = function() { blurred && (location.reload()); };
+
+      var FULL_DASH_ARRAY = 283;
+      var WARNING_THRESHOLD = 300;
+      var ALERT_THRESHOLD = 120;
+
+      var COLOR_CODES = {
+        info: {
+          color: "green"
+        },
+        warning: {
+          color: "orange",
+          threshold: WARNING_THRESHOLD
+        },
+        alert: {
+          color: "red",
+          threshold: ALERT_THRESHOLD
+        }
+      };
+
+      // Convert start time from Unix timestamp in seconds to milliseconds
+      var tStart = parseInt(sParam) * 1000; // tStart is in milliseconds
+      var tDuration = parseInt(dParam) * 60 * 1000; // tDuration in milliseconds
+      var tEnd = tStart + tDuration; // tEnd in milliseconds
+
+      // Calculate total time limit in seconds
+      var TIME_LIMIT = Math.floor(tDuration / 1000); // Total duration in seconds
+
+      // Calculate time passed and time left
+      var now = Date.now();
+      var timePassed = Math.floor((now - tStart) / 1000); // Time passed in seconds
+      var timeLeft = Math.max(0, TIME_LIMIT - timePassed); // Time left in seconds
+
+      var timer = null;
+      var remainingPathColor = COLOR_CODES.info.color;
+
+      // Get title and end message from URL parameters
+      var titleParam = get('t');
+      var endMessageParam = get('e') || "Time's Up";
+
+      // Display the title if provided
+      if (titleParam) {
+        var timerTitle = document.getElementById('timerTitle');
+        timerTitle.textContent = decodeURIComponent(titleParam);
+      }
+
+      // Initialize the timer display
+      document.getElementById("app").innerHTML = '\
+      <div class="base-timer">\
+        <svg class="base-timer__svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">\
+          <g class="base-timer__circle">\
+            <circle class="base-timer__path-elapsed" cx="50" cy="50" r="45"></circle>\
+            <path\
+              id="base-timer-path-remaining"\
+              stroke-dasharray="283"\
+              class="base-timer__path-remaining ' + remainingPathColor + '"\
+              d="\
+                M 50, 50\
+                m -45, 0\
+                a 45,45 0 1,0 90,0\
+                a 45,45 0 1,0 -90,0\
+              "\
+            ></path>\
+          </g>\
+        </svg>\
+        <span id="base-timer-label" class="base-timer__label">' + formatTime(
+          timeLeft
+        ) + '</span>\
+      </div>\
+      ';
+
+      // Set initial circle dasharray and color
+      setCircleDasharray();
+      setRemainingPathColor(timeLeft);
+
+      startTimer();
+
+      function onTimesUp() {
+        clearInterval(timer);
+        // Play the TimeUp.mp3 sound
+        var audio = new Audio('TimeUp.mp3');
+        audio.play();
+
+        // Change the timer label to end message and add vibration effect
+        var timerLabel = document.getElementById("base-timer-label");
+        timerLabel.innerHTML = decodeURIComponent(endMessageParam);
+        timerLabel.classList.add("times-up");
+
+        // Ensure the path remaining is fully red
+        var pathRemaining = document.getElementById("base-timer-path-remaining");
+        pathRemaining.classList.remove(COLOR_CODES.warning.color, COLOR_CODES.info.color);
+        pathRemaining.classList.add(COLOR_CODES.alert.color);
+        pathRemaining.setAttribute("stroke-dasharray", "283 283");
+      }
+
+      function startTimer() {
+        timer = setInterval(function() {
+          // Update timePassed and timeLeft
+          var now = Date.now();
+          timePassed = Math.floor((now - tStart) / 1000);
+          timeLeft = Math.max(0, TIME_LIMIT - timePassed);
+
+          // Update the timer label
+          document.getElementById("base-timer-label").innerHTML = formatTime(
+            timeLeft
+          );
+
+          // Update the circle progress and color
+          setCircleDasharray();
+          setRemainingPathColor(timeLeft);
+
+          if (timeLeft <= 0) {
+            onTimesUp();
+          } else if (timeLeft == 121) {
+            var audio = new Audio('2minutesleft.mp3');
+            audio.play();
+          }
+        }, 1000);
+      }
+
+      function formatTime(time) {
+        var minutes = Math.floor(time / 60);
+        var seconds = time % 60;
+
+        if (seconds < 10) {
+          seconds = '0' + seconds;
+        }
+
+        return minutes + ':' + seconds;
+      }
+
+      function setRemainingPathColor(timeLeft) {
+        var alert = COLOR_CODES.alert;
+        var warning = COLOR_CODES.warning;
+        var info = COLOR_CODES.info;
+
+        var pathRemaining = document.getElementById("base-timer-path-remaining");
+
+        if (timeLeft <= alert.threshold) {
+          pathRemaining.classList.remove(warning.color);
+          pathRemaining.classList.add(alert.color);
+        } else if (timeLeft <= warning.threshold) {
+          pathRemaining.classList.remove(info.color);
+          pathRemaining.classList.add(warning.color);
+        } else {
+          pathRemaining.classList.remove(alert.color, warning.color);
+          pathRemaining.classList.add(info.color);
+        }
+      }
+
+      function calculateTimeFraction() {
+        var rawTimeFraction = timeLeft / TIME_LIMIT;
+        if (rawTimeFraction < 0) {
+          rawTimeFraction = 0;
+        }
+        return rawTimeFraction - (1 / TIME_LIMIT) * (1 - rawTimeFraction);
+      }
+
+      function setCircleDasharray() {
+        var circleDasharray = (
+          calculateTimeFraction() * FULL_DASH_ARRAY
+        ).toFixed(0) + ' 283';
+        document
+          .getElementById("base-timer-path-remaining")
+          .setAttribute("stroke-dasharray", circleDasharray);
+      }
+
+      // Function to update QR code colors when mode changes
+      function updateQRCodeColors() {
+        var isDarkMode = document.body.classList.contains('dark-mode');
+
+        // Set QR code colors based on the current mode
+        var qrForegroundColor = isDarkMode ? "#FFFFFF" : "#000000";
+        var qrBackgroundColor = isDarkMode ? "#000000" : "#FFFFFF";
+
+        // Clear the existing QR code
+        qrCodeContainer.innerHTML = '';
+
+        // Create the QR code
+        qrCode = new QRCode(qrCodeContainer, {
+          text: window.location.href,
+          width: 200,
+          height: 200,
+          colorDark : qrForegroundColor,
+          colorLight : qrBackgroundColor,
+          correctLevel : QRCode.CorrectLevel.M
+        });
+      }
+
+      // Generate QR code with the current URL using QRCode.js
+      var qrCodeContainer = document.querySelector("#showEWM .qr-code-container");
+
+      // Detect current mode
+      var isDarkMode = document.body.classList.contains('dark-mode');
+
+      // Set QR code colors based on the current mode
+      var qrForegroundColor = isDarkMode ? "#FFFFFF" : "#000000";
+      var qrBackgroundColor = isDarkMode ? "#000000" : "#FFFFFF";
+
+      // Create the QR code
+      var qrCode = new QRCode(qrCodeContainer, {
+        text: window.location.href,
+        width: 200,
+        height: 200,
+        colorDark : qrForegroundColor,
+        colorLight : qrBackgroundColor,
+        correctLevel : QRCode.CorrectLevel.M
+      });
+    } else {
+      document.getElementById('app').style.display = 'none';
+      document.getElementById('qrWrapper').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
